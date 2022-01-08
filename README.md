@@ -12,7 +12,7 @@ ___
 
 | .NET Framework | .NET Standard | .NET |
 | :-: | :-: | :-: |
-| :heavy_minus_sign: | :heavy_check_mark: 2.0 | :heavy_check_mark: 5.0 |
+| :heavy_minus_sign: | :heavy_check_mark: 2.0 | :heavy_check_mark: 5.0 :heavy_check_mark: 6.0 |
 
 This assembly is centered around the dependency injection framework [**Autofac**](https://github.com/autofac/Autofac).
 
@@ -131,7 +131,7 @@ class DatabaseModule : Autofac.Module
 			;
 	}
 
-	internal static async IAsyncEnumerable<string> VerifyConnectivityAsync
+	internal static async IAsyncEnumerable<IocScopeVerificationResult> VerifyConnectivityAsync
 	(
 		IDatabaseContext.Factory contextFactory,
 		[EnumeratorCancellation] CancellationToken cancellationToken = default
@@ -140,24 +140,37 @@ class DatabaseModule : Autofac.Module
 		yield return "Checking database availability";
 		do
 		{
-			var isConnected = true;
+			using var context = contextFactory.Invoke();
+			var (isConnected, exception) = await context.CheckConnectionAsync(cancellationToken).ConfigureAwait(true);
 			if (isConnected)
 			{
 				yield return "Connection to database has been established.";
 				break;
 			}
-			yield return "Connection to database couldn't be established. Trying again...";
-			try
+			else if (cancellationToken.IsCancellationRequested)
 			{
-				await Task.Delay(2000, cancellationToken);
+				break;
 			}
-			catch (OperationCanceledException) { /* ignore */ }
+			else
+			{
+				yield return new IocScopeVerificationResult
+				(
+					"Connection to database couldn't be established. Trying again...",
+					exception
+				);
+				try
+				{
+					await Task.Delay(2000, cancellationToken);
+				}
+				catch (OperationCanceledException) { /* ignore */ }
+			}
+
 		}
 		while (!cancellationToken.IsCancellationRequested);
 	}
 }
 ```
-At some point during application startup it would be a good idea to validate, if a connection to the database can be established. This is where the second registration of the `IocScopeVerificationDelegate` comes into play. The `ILifetimeScope.ExecuteVerificationMethodsAsync` extension method resolves all registered `IocScopeVerificationDelegate`s and executes them. It asynchronously returns messages from the verification functions, that can be used for logging purposes or even be displayed as part of an application loading dialog.
+At some point during application startup it would be a good idea to validate, if a connection to the database can be established. This is where the second registration of the `IocScopeVerificationDelegate` comes into play. The `ILifetimeScope.ExecuteVerificationMethodsAsync` extension method resolves all registered `IocScopeVerificationDelegate`s and executes them. The implemented verification functions then asynchronously return `IocScopeVerificationResult`s, that can be used for logging purposes or even be displayed as part of an application loading dialog.
 
 ```csharp
 var builder = new ContainerBuilder();
@@ -166,7 +179,7 @@ var container = builder.Build();
 try
 {
 	var asyncEnumerable = container.ExecuteVerificationMethodsAsync();
-	await foreach (var message in asyncEnumerable)
+	await foreach (var result in asyncEnumerable)
 	{
 		/* Log the messages. */
 	}
@@ -195,4 +208,4 @@ ___
 
 # Authors
 
-* **Felix Leistner**: _v1.x_
+* **Felix Leistner**: _v1.x_ - _v2.x_
