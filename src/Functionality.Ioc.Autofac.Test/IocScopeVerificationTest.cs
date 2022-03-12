@@ -1,108 +1,115 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Runtime.CompilerServices;
-using System.Threading;
-using System.Threading.Tasks;
+﻿using System.Runtime.CompilerServices;
 using AutoFixture;
 using AutoFixture.AutoMoq;
 using NUnit.Framework;
 using Phoenix.Functionality.Ioc.Autofac;
 
-namespace Functionality.Ioc.Autofac.Test
+namespace Functionality.Ioc.Autofac.Test;
+public class IocScopeVerificationTest
 {
-	public class IocScopeVerificationTest
-	{
+	#region Setup
+
 #pragma warning disable 8618 // → Always initialized in the 'Setup' method before a test is run.
-		private IFixture _fixture;
+	private IFixture _fixture;
 #pragma warning restore 8618
 
-		[SetUp]
-		public void Setup()
+	[OneTimeSetUp]
+	public void BeforeAllTests() { }
+
+	[SetUp]
+	public void BeforeEachTest()
+	{
+		_fixture = new Fixture().Customize(new AutoMoqCustomization());
+	}
+
+	[TearDown]
+	public void AfterEachTest() { }
+
+	[OneTimeTearDown]
+	public void AfterAllTests() { }
+
+	#endregion
+
+	/// <summary> Checks that an immediately thrown <see cref="Exception"/> in a verification method is properly caught. This is different from throwing after anything has been yielded, as the enumerator is not even started. </summary>
+	[Test]
+	public void Check_Executing_Verification_Methods_Catches_Immediate_Exception()
+	{
+		// Arrange
+		var targetException = new ApplicationException();
+		IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod(CancellationToken token)
 		{
-			_fixture = new Fixture().Customize(new AutoMoqCustomization());
+			throw targetException!;
 		}
 
-		/// <summary> Checks that an immediately thrown <see cref="Exception"/> in a verification method is properly caught. This is different from throwing after anything has been yielded, as the enumerator is not even started. </summary>
-		[Test]
-		public void Check_Executing_Verification_Methods_Catches_Immediate_Exception()
+		// Act
+		var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate) VerificationMethod });
+
+		// Assert
+		var actualException = Assert.CatchAsync<IocScopeVerificationException>(async () => { await foreach (var _ in asyncEnumerable) { } });
+		Assert.AreSame(targetException, actualException!.InnerException);
+	}
+
+	/// <summary> Checks that any <see cref="Exception"/> a verification method throws, is wrapped within a <see cref="IocScopeVerificationException"/>. </summary>
+	[Test]
+	public void Check_Executing_Verification_Methods_Does_Only_Throw_IocModuleVerificationException()
+	{
+		// Arrange
+		var targetException = new ApplicationException();
+		async IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod([EnumeratorCancellation] CancellationToken token)
 		{
-			// Arrange
-			var targetException = new ApplicationException();
-			IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod(CancellationToken token)
-			{
-				throw targetException!;
-			}
-
-			// Act
-			var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate) VerificationMethod });
-
-			// Assert
-			var actualException = Assert.CatchAsync<IocScopeVerificationException>(async () => { await foreach (var _ in asyncEnumerable) { } });
-			Assert.AreSame(targetException, actualException!.InnerException);
+			await Task.Delay(100, token);
+			yield return "Something";
+			throw targetException!;
 		}
 
-		/// <summary> Checks that any <see cref="Exception"/> a verification method throws, is wrapped within a <see cref="IocScopeVerificationException"/>. </summary>
-		[Test]
-		public void Check_Executing_Verification_Methods_Does_Only_Throw_IocModuleVerificationException()
+		// Act
+		var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate)VerificationMethod });
+
+		// Assert
+		var actualException = Assert.CatchAsync<IocScopeVerificationException>(async () => { await foreach (var _ in asyncEnumerable) { } });
+		Assert.AreSame(targetException, actualException!.InnerException);
+	}
+
+	/// <summary> Checks that executing verification methods can be cancelled and that an <see cref="OperationCanceledException"/> is then thrown. </summary>
+	[Test]
+	public void Check_Executing_Verification_Methods_Throw_On_Immediate_Cancellation()
+	{
+		// Arrange
+		var cancellationTokenSource = new CancellationTokenSource();
+		cancellationTokenSource.Cancel();
+		IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod(CancellationToken token)
 		{
-			// Arrange
-			var targetException = new ApplicationException();
-			async IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod([EnumeratorCancellation] CancellationToken token)
-			{
-				await Task.Delay(100, token);
-				yield return "Something";
-				throw targetException!;
-			}
-
-			// Act
-			var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate)VerificationMethod });
-
-			// Assert
-			var actualException = Assert.CatchAsync<IocScopeVerificationException>(async () => { await foreach (var _ in asyncEnumerable) { } });
-			Assert.AreSame(targetException, actualException!.InnerException);
+			token.ThrowIfCancellationRequested();
+			throw new ApplicationException();
 		}
 
-		/// <summary> Checks that executing verification methods can be cancelled and that an <see cref="OperationCanceledException"/> is then thrown. </summary>
-		[Test]
-		public void Check_Executing_Verification_Methods_Throw_On_Immediate_Cancellation()
+		// Act
+		var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate) VerificationMethod }, cancellationTokenSource.Token);
+
+		// Assert
+		//Assert.DoesNotThrowAsync(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
+		Assert.CatchAsync<OperationCanceledException>(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
+	}
+
+	/// <summary> Checks that executing verification methods can be cancelled and that an <see cref="OperationCanceledException"/> is then thrown. </summary>
+	[Test]
+	public void Check_Executing_Verification_Methods_Throw_On_Cancellation()
+	{
+		// Arrange
+		var cancellationTokenSource = new CancellationTokenSource();
+		cancellationTokenSource.Cancel();
+		async IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod([EnumeratorCancellation] CancellationToken token)
 		{
-			// Arrange
-			var cancellationTokenSource = new CancellationTokenSource();
-			cancellationTokenSource.Cancel();
-			IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod(CancellationToken token)
-			{
-				token.ThrowIfCancellationRequested();
-				throw new ApplicationException();
-			}
-
-			// Act
-			var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate) VerificationMethod }, cancellationTokenSource.Token);
-
-			// Assert
-			//Assert.DoesNotThrowAsync(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
-			Assert.CatchAsync<OperationCanceledException>(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
+			token.ThrowIfCancellationRequested();
+			await Task.Delay(100, token);
+			yield return "Something";
 		}
 
-		/// <summary> Checks that executing verification methods can be cancelled and that an <see cref="OperationCanceledException"/> is then thrown. </summary>
-		[Test]
-		public void Check_Executing_Verification_Methods_Throw_On_Cancellation()
-		{
-			// Arrange
-			var cancellationTokenSource = new CancellationTokenSource();
-			cancellationTokenSource.Cancel();
-			async IAsyncEnumerable<IocScopeVerificationResult> VerificationMethod([EnumeratorCancellation] CancellationToken token)
-			{
-				token.ThrowIfCancellationRequested();
-				await Task.Delay(100, token);
-				yield return "Something";
-			}
+		// Act
+		var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate)VerificationMethod }, cancellationTokenSource.Token);
 
-			// Act
-			var asyncEnumerable = LifetimeScopeExtensions.VerifyAsync(new[] { (IocScopeVerificationDelegate)VerificationMethod }, cancellationTokenSource.Token);
-
-			// Assert
-			//Assert.DoesNotThrowAsync(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
-			Assert.CatchAsync<OperationCanceledException>(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
-		}
+		// Assert
+		//Assert.DoesNotThrowAsync(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
+		Assert.CatchAsync<OperationCanceledException>(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
 	}
 }

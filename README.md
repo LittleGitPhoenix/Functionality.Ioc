@@ -16,11 +16,13 @@ ___
 
 This assembly is centered around the dependency injection framework [**Autofac**](https://github.com/autofac/Autofac).
 
-## Scope Building (`NestedScopeBuilder`)
+## Scope Handling
+
+### Scope Building (`NestedScopeBuilder`)
 
 The `NestedScopeBuilder` allows to build nested **Autofac.ILifetimeScope**s. Each of those is build from a single named group consisting of multiple **Autofac.Core.IModule**s. Its main purpose is to help setting up a complex chain of nested **Autofac.ILifetimeScope**s within an applications bootstrapper or loader class.
 
-### Usage
+#### Usage
 
 First an instance of a `NestedScopeBuilder` has to be created.
 
@@ -51,8 +53,6 @@ First an instance of a `NestedScopeBuilder` has to be created.
 		The instance could also be created by an <b>ILifetimeScope</b> that was setup during application startup whose only purpose is to provide the most basic services like settings, the main application window and of course this <i>NestedScopeBuilder</i>, that will be responsible for setting up all other scopes that the application needs. The constructor accepting an already existing scope should be used in this case.
     </div>
 </div>
-
-
 After the `NestedScopeBuilder` has been created, additional scopes can be setup. During setup, each scope is identified by a custom name, that allows to combine modules together that later should compose a single **Autofac.ILifetimeScope**. In the below example the _DatabaseModule_ is added to a group name _Services_ and the other two modules are added to a group name _Application_. During build two **ILifetimeScope**s would be created, where the one from the _Application_ group would be a child scope to the _Services_ one. This guarantees, that the _Application_ scope can access all services from its parent scopes.
 
 ```csharp
@@ -101,7 +101,7 @@ var finalScope = await builder.BuildAsync();
 
 
 
-## Scope Verification
+### Scope Verification
 
 The extension method `ILifetimeScope.ExecuteVerificationMethodsAsync` can be used together with functions that have been registered as `IocScopeVerificationDelegate` to verify any given scope with custom logic. Below example shows how an **Autofac.Core.IModule** could be written, to easily provide such an verification function.
 
@@ -203,6 +203,32 @@ catch (IocScopeVerificationException ex)
         Executing <i>ExecuteVerificationMethodsAsync</i> will only ever throw either an <i>OperationCanceledException</i> or an <i>IocScopeVerificationException</i>. If a verification method internally threw something else, this exception will be wrapped within the <i>IocScopeVerificationException</i> as inner exception.
     </div>
 </div>
+
+## Helpers
+
+### TypeList{T}
+
+The `TypeList{T}` is a special collection that can be used to resolve the types of registered services (as opposed to their instances) from an **IContainer**. This can be useful in cases where only the types are required to get further information (like [**Attributes**](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/attributes/)) about them.
+
+To get this working the `TypeListSource<T>` (an **IRegistrationSource**) must be added to the **ContainerBuilder** where the services are registered.
+
+```c#
+interface ISomething { }
+class Anything : ISomething { }
+class Everything : ISomething { }
+
+var builder = new ContainerBuilder();
+builder.RegisterSource<TypeListSource<ISomething>>();
+builder.RegisterType<Anything>().As<ISomething>();
+builder.RegisterType<Everything>().As<ISomething>();
+var container = builder.Build();
+
+// Get a collection of the registered ISomething types.
+var types = container.Resolve<TypeList<ISomething>>();
+```
+
+
+
 
 ___
 

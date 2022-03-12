@@ -1,13 +1,13 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio Version 16
-VisualStudioVersion = 16.0.31829.152
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.32126.317
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Functionality.Ioc.Autofac", "Functionality.Ioc.Autofac\Functionality.Ioc.Autofac.csproj", "{FDEDEEB7-0996-46A0-9404-D36110DE1458}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Tests", "Tests", "{F4A7B974-B3BB-4303-8B60-7B08770FE7A1}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Functionality.Ioc.Autofac.Test", "Functionality.Ioc.Autofac.Test\Functionality.Ioc.Autofac.Test.csproj", "{E5D088E5-CAC4-45FC-AE49-93D40C84B290}"
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Functionality.Ioc.Autofac.Test", "Functionality.Ioc.Autofac.Test\Functionality.Ioc.Autofac.Test.csproj", "{E5D088E5-CAC4-45FC-AE49-93D40C84B290}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
