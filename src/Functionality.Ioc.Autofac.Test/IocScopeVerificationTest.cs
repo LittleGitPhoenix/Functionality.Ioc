@@ -30,6 +30,8 @@ public class IocScopeVerificationTest
 
 	#endregion
 
+	#region Tests
+
 	/// <summary> Checks that an immediately thrown <see cref="Exception"/> in a verification method is properly caught. This is different from throwing after anything has been yielded, as the enumerator is not even started. </summary>
 	[Test]
 	public void Check_Executing_Verification_Methods_Catches_Immediate_Exception()
@@ -112,4 +114,6 @@ public class IocScopeVerificationTest
 		//Assert.DoesNotThrowAsync(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
 		Assert.CatchAsync<OperationCanceledException>(async () => { await foreach (var _ in asyncEnumerable.WithCancellation(cancellationTokenSource.Token)) { } });
 	}
+
+	#endregion
 }

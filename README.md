@@ -227,9 +227,50 @@ var container = builder.Build();
 var types = container.Resolve<TypeList<ISomething>>();
 ```
 
+### RegisterFactory
 
+`RegisterFactory` is an extension method for a **ContainerBuilder**, that allows to register the return type of a [delegate factory](https://docs.autofac.org/en/latest/advanced/delegate-factories.html). This function is only a wrapper and could be replaced by simply using `builder.RegisterType(returnType).AsSelf()` instead. Its sole purpose is therefore providing a way to identify registrations that are later only used to resolve factories.
 
+Below shows the typical approach of registering a specific type and letting **Autofac** automatically register the delegate factory in the background, thus concealing dependencies.
 
+```c#
+var builder = new ContainerBuilder();
+// Only register the type containing a delegate factory:
+builder.RegisterType<ClassWithDelegateFactory>().AsSelf();
+var container = builder.Build();
+// Why the delegate factory can be resolved is not immediately clear by the code alone and requires more detailed knowledge about Autofac.
+var factory = container.Resolve<ClassWithDelegateFactory.Factory>();
+```
+The `RegisterFactory` extension method makes the intentions more clear and provides a better way to track registrations.
+
+```c#
+var builder = new ContainerBuilder();
+// Register the delegate factory directly.
+builder.RegisterFactory<ClassWithDelegateFactory.Factory>();
+var container = builder.Build();
+// Now resolving it should be more intuitive.
+var factory = container.Resolve<ClassWithDelegateFactory.Factory>();
+```
+
+### InternalConstructorFinder
+
+The `InternalConstructorFinder` can be used when registering services that may provide only internal constructors. Normally this would throw a **NoConstructorsFoundException** by **Autofac** when the container is build. This is typical necessary when keeping the access level to a bare minimum.
+
+To use the `InternalConstructorFinder` best apply the `FindInternalConstructors` extension method during registration.
+
+```c#
+class ClassWithInternalConstructor
+{
+    internal ClassWithInternalConstructor() { }
+}
+
+var builder = new ContainerBuilder();
+builder.RegisterType<ClassWithInternalConstructor>().AsSelf().FindInternalConstructors();
+var container = builder.Build();
+
+// Get an instance.
+var instance = container.Resolve<ClassWithInternalConstructor>();
+```
 ___
 
 # Authors

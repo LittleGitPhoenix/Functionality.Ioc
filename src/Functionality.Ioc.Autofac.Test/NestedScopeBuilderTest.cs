@@ -31,6 +31,8 @@ public class NestedScopeBuilderTest
 
 	#endregion
 
+	#region Tests
+
 	[Test]
 	public async Task Check_Module_Will_Be_Added()
 	{
@@ -246,4 +248,6 @@ public class NestedScopeBuilderTest
 		Assert.That(builder.ModuleGroups.Last().GroupName, Is.EqualTo($"After{groupName}"));
 		Assert.That(builder.ModuleGroups.Last().Modules, Has.Count.EqualTo(1));
 	}
+
+	#endregion
 }

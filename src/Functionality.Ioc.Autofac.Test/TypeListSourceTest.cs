@@ -56,6 +56,8 @@ public class TypeListSourceTest
 
 	#endregion
 
+	#region Tests
+
 	[Test]
 	public void Check_Get_Registered_Types()
 	{
@@ -104,4 +106,6 @@ public class TypeListSourceTest
 		Assert.IsNotEmpty(types);
 		Assert.That(Anything.InstanceCount, Is.EqualTo(0));
 	}
+
+	#endregion
 }

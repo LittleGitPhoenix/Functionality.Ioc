@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/), and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 ___
 
+## 2.2.0 (2022-05-03)
+
+### Added
+
+- New `InternalConstructorFinder` that can be used to register types that provide internal constructors.
+- New `RegisterFactory` extension method to register a type via a [delegate factory](https://docs.autofac.org/en/latest/advanced/delegate-factories.html).
+___
+
 ## 2.1.0 (2022-03-12)
 
 ### Added
