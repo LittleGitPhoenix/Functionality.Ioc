@@ -8,6 +8,11 @@ using Phoenix.Functionality.Ioc.Autofac;
 
 namespace Functionality.Ioc.Autofac.Test;
 
+/// <summary>
+/// Standalone delegate used by <see cref="ContainerBuilderExtensionsTest.ThrowsIfDelegateFactoryIsStandalone"/>
+/// </summary>
+public delegate object Factory();
+
 public class ContainerBuilderExtensionsTest
 {
 	#region Setup
@@ -33,9 +38,18 @@ public class ContainerBuilderExtensionsTest
 
 	#endregion
 
+	#region Tests
+
+	#region RegisterFactory
+	
 	#region Data
 
-	internal class ClassWithDelegateFactory
+	internal interface IClassWithDelegateFactory
+	{
+		string Value { get; }
+	}
+
+	internal class ClassWithDelegateFactory : IClassWithDelegateFactory
 	{
 		public delegate ClassWithDelegateFactory Factory(int id);
 
@@ -54,10 +68,6 @@ public class ContainerBuilderExtensionsTest
 
 	#endregion
 
-	#region Tests
-
-	#region RegisterFactory
-
 	[Test]
 	[Category($"{nameof(ContainerBuilderExtensions.RegisterFactory)}")]
 	public void RegisteringSucceeds()
@@ -65,6 +75,7 @@ public class ContainerBuilderExtensionsTest
 		// Arrange
 		var builder = new ContainerBuilder();
 		builder.RegisterFactory<ClassWithDelegateFactory.Factory>();
+		//builder.RegisterType<ClassWithDelegateFactory>();
 		var container = builder.Build();
 
 		// Act + Act
@@ -171,6 +182,17 @@ public class ContainerBuilderExtensionsTest
 	{
 		// Act + Assert
 		Assert.Catch<ArgumentNullException>(() => ContainerBuilderExtensions.RegisterFactory<ClassWithDelegateFactory.Factory>(null));
+	}
+
+	[Test]
+	[Category($"{nameof(ContainerBuilderExtensions.RegisterFactory)}")]
+	public void ThrowsIfDelegateFactoryIsStandalone()
+	{
+		// Arrange
+		var builder = new ContainerBuilder();
+		
+		// Act + Act
+		Assert.Catch<ArgumentException>(() => builder.RegisterFactory<Factory>());
 	}
 
 	[Test]
