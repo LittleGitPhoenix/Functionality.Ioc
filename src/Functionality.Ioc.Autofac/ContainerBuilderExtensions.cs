@@ -39,13 +39,20 @@ public static class ContainerBuilderExtensions
 #endif
 
 		// Get the return type of the delegate.
-		var implementerType = typeof(TFactory);
-		if (!typeof(System.Delegate).IsAssignableFrom(implementerType)) throw new ArgumentException($"The generic type argument '{nameof(TFactory)}' is of type '{implementerType.FullName}' but must be of type '{typeof(System.Delegate).FullName}'.");
-		if (implementerType.Name != "Factory") throw new ArgumentException($"The generic type argument '{nameof(TFactory)}' of type '{implementerType.FullName}' must be named 'Factory'.");
-		var returnType = implementerType.GetMethod("Invoke")!.ReturnType;
+		var delegateType = typeof(TFactory);
+		if (!typeof(System.Delegate).IsAssignableFrom(delegateType)) throw new ArgumentException($"The generic type argument '{nameof(TFactory)}' is of type '{delegateType.FullName}' but must be of type '{typeof(System.Delegate).FullName}'.");
+		
+		var declaringType = delegateType.DeclaringType;
+		if (declaringType is null) throw new ArgumentException($"The delegate '{delegateType.FullName}' is standalone but must be declared within another type to be used as delegate factory.");
+		
+		if (delegateType.Name != "Factory") throw new ArgumentException($"The generic type argument '{nameof(TFactory)}' of type '{delegateType.FullName}' must be named 'Factory'.");
+		var returnType = delegateType.GetMethod("Invoke")!.ReturnType;
 
-		// Register the return type.
-		return builder.RegisterType(returnType).AsSelf();
+		// Check if the return type of the delegate can be assigned to the type containing the delegate.
+		if (!returnType.IsAssignableFrom(declaringType)) throw new ArgumentException($"the delegate factories '{delegateType.FullName}' return type '{returnType.FullName}' must be assignable from the type '{delegateType.FullName}' it is declared in.");
+
+		// Register the declaring type, so that Autofac can pick-up the delegate factory.
+		return builder.RegisterType(declaringType).AsSelf();
 	}
 
 	#endregion
