@@ -227,6 +227,37 @@ var container = builder.Build();
 var types = container.Resolve<TypeList<ISomething>>();
 ```
 
+### TypeAndFactoryList{T}
+
+The `TypeAndFactoryList{T}` is a special collection that can be used to resolve the types of registered services (as opposed to their instances) alongside a factory for actually creating instances of the type from an **IContainer**. This can be useful in cases where only the types are required to get further information (like [**Attributes**](https://docs.microsoft.com/en-us/dotnet/csharp/programming-guide/concepts/attributes/)) about them and then based on those create actual instances.
+
+To get this working the `TypeAndFactoryListSource<T>` (an **IRegistrationSource**) must be added to the **ContainerBuilder** where the services are registered.
+
+<div style='padding:0.1em; border-style: solid; border-width: 0px; border-left-width: 10px; border-color: #ff0000; background-color: #ff000020' >
+	<span style='margin-left:1em; text-align:left'>
+    	<b>Registration as self</b>
+    </span>
+    <br>
+	<div style='margin-left:1em; margin-right:1em;'>
+		It is mandatory to additionally register the services <i>AsSelf()</i>, so that individual instances can be resolved from <b>Autofac</b> when invoking the fatory methods. Not doing this will result in a <b>ComponentNotRegisteredException</b> being thrown when invoking the factory method.
+    </div>
+</div>
+
+```c#
+interface ISomething { }
+class Anything : ISomething { }
+class Everything : ISomething { }
+
+var builder = new ContainerBuilder();
+builder.RegisterSource<TypeAndFactoryListSource<ISomething>>();
+builder.RegisterType<Anything>().AsSelf().As<ISomething>(); // Don't forget to register as self.
+builder.RegisterType<Everything>().AsSelf().As<ISomething>(); // Don't forget to register as self.
+var container = builder.Build();
+
+// Get a collection of the registered ISomething types.
+var types = container.Resolve<TypeAndFactoryList<ISomething>>();
+```
+
 ### RegisterFactory
 
 `RegisterFactory` is an extension method for a **ContainerBuilder**, that allows to register the return type of a [delegate factory](https://docs.autofac.org/en/latest/advanced/delegate-factories.html). This function is only a wrapper and could be replaced by simply using `builder.RegisterType(returnType).AsSelf()` instead. Its sole purpose is therefore providing a way to identify registrations that are later only used to resolve factories.

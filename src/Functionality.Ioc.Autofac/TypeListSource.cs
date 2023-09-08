@@ -49,19 +49,19 @@ public class TypeListSource<T> : IRegistrationSource
 					var types = context
 						.ComponentRegistry
 						.RegistrationsFor(new TypedService(typeof(T)))
-						.Select(r => r.Activator)
+						.Select(registration => registration.Activator)
 						.OfType<ReflectionActivator>()
 						.Select(activator => activator.LimitType)
 						;
 					return new TypeList<T>(types);
 				}
 			),
-			services: new[] {service},
+			services: new[] { service },
 			lifetime: new CurrentScopeLifetime(),
 			sharing: InstanceSharing.None,
 			ownership: InstanceOwnership.OwnedByLifetimeScope,
 			metadata: new Dictionary<string, object?>()
 		);
-		return new IComponentRegistration[] {registration};
+		return new IComponentRegistration[] { registration };
 	}
 }

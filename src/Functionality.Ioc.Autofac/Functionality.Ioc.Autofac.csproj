@@ -10,8 +10,8 @@
 		<Description>Helper for inversion of control driven by Autofac.</Description>
 		<Company>Little Phoenix</Company>
 		<Authors>Felix Leistner</Authors>
-		<Copyright>2022</Copyright>
-		<Version>2.2.1-beta.1</Version>
+		<Copyright>2023</Copyright>
+		<Version>2.3.0-beta.1</Version>
 		<GenerateDocumentationFile>true</GenerateDocumentationFile>
 		<IncludeSymbols>true</IncludeSymbols>
 		<GeneratePackageOnBuild>true</GeneratePackageOnBuild>
